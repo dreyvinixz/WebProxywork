@@ -7,3 +7,8 @@
 {"timestamp": "2026-05-29T10:00:50.002492+00:00", "url": "http://pagina?x=1", "domain": "pagina", "action": "error", "status_code": 502, "filtered_terms_count": 0}
 {"timestamp": "2026-05-29T10:01:46.942293+00:00", "url": "http://pagina?x=1", "domain": "pagina", "action": "error", "status_code": 502, "filtered_terms_count": 0}
 {"timestamp": "2026-05-29T10:02:43.351750+00:00", "url": "http://127.0.0.1:56768/pagina?x=1", "domain": "127.0.0.1", "action": "filtered", "status_code": 200, "filtered_terms_count": 1}
+{"timestamp": "2026-05-29T10:11:35.611153+00:00", "url": "http://favicon.ico", "domain": "favicon.ico", "action": "error", "status_code": 502, "filtered_terms_count": 0}
+{"timestamp": "2026-05-29T10:11:52.073199+00:00", "url": "http://example.com", "domain": "example.com", "action": "allowed", "status_code": 200, "filtered_terms_count": 0}
+{"timestamp": "2026-05-29T10:11:52.169732+00:00", "url": "http://favicon.ico", "domain": "favicon.ico", "action": "error", "status_code": 502, "filtered_terms_count": 0}
+{"timestamp": "2026-05-29T10:12:12.443990+00:00", "url": "http://instagram.com", "domain": "instagram.com", "action": "blocked", "status_code": 403, "filtered_terms_count": 0}
+{"timestamp": "2026-05-29T10:12:12.534214+00:00", "url": "http://favicon.ico", "domain": "favicon.ico", "action": "error", "status_code": 502, "filtered_terms_count": 0}
