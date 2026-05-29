@@ -1,0 +1,163 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazilian]{babel}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{parskip}
+\geometry{margin=2.5cm}
+
+\begin{document}
+\sloppy
+
+\hypersetup{pageanchor=false}
+\begin{titlepage}
+\centering
+{\large Universidade Federal do Rio Grande -- FURG\par}
+{\large Centro de Ciencias Computacionais\par}
+{\large Sistemas para Internet 2\par}
+\vfill
+{\Huge Web Proxy HTTP com Controle de Conteudo\par}
+\vspace{1.5cm}
+{\Large Relatorio Tecnico\par}
+\vfill
+{\large Autor: Andrey Vinicius Santos Souza -- 164402\par}
+{\large Professor: Prof. Dr. Andre Prisco Vargas\par}
+{\large Semestre: 2026/1\par}
+\vfill
+{\large Rio Grande, RS -- Brasil\par}
+{\large 2026\par}
+\end{titlepage}
+
+\hypersetup{pageanchor=true}
+\pagenumbering{arabic}
+\setcounter{page}{1}
+\tableofcontents
+\newpage
+
+\section{Introducao}
+
+Este relatorio descreve a implementacao de um proxy HTTP didatico com controle de conteudo. O sistema recebe uma URL pelo navegador, consulta uma lista local de dominios bloqueados, busca a pagina original quando o acesso e permitido, aplica substituicoes em respostas HTML e registra cada acesso em arquivo de log.
+
+O objetivo nao foi criar um proxy corporativo completo, mas construir uma versao funcional e explicavel dos mecanismos pedidos no enunciado: repasse, bloqueio, filtragem, registro de acesso e discussao sobre HTTPS.
+
+\section{Justificativa da tecnologia}
+
+A implementacao usa Python 3 com Flask. A escolha foi feita porque o Flask permite criar rapidamente uma rota HTTP e concentrar o trabalho na logica do proxy: validacao da URL, bloqueio, repasse, filtro e registro de acessos. Para buscar o servidor de origem foi usada a biblioteca \texttt{requests}, que simplifica timeout, redirecionamentos e leitura de cabecalhos.
+
+A alternativa com sockets TCP daria mais controle, mas tambem exigiria implementar manualmente o parsing de requisicoes e respostas HTTP. Para o objetivo do trabalho, Flask e \texttt{requests} deram um equilibrio melhor entre clareza, funcionamento e facilidade de manutencao.
+
+\section{Organizacao do projeto}
+
+O projeto foi dividido em modulos pequenos, cada um com uma responsabilidade principal:
+
+\begin{itemize}
+  \item \texttt{proxy\_controller.py}: recebe a requisicao Flask, valida a URL e coordena o fluxo.
+  \item \texttt{content\_policy.py}: carrega a lista de dominios bloqueados e decide se o acesso deve ser barrado.
+  \item \texttt{origin\_client.py}: faz a requisicao ao servidor de origem usando \texttt{requests}.
+  \item \texttt{text\_rewriter.py}: aplica as substituicoes configuradas em respostas HTML.
+  \item \texttt{access\_audit.py}: grava o log incremental em JSON Lines.
+  \item \texttt{html\_pages.py}: gera as paginas HTML de erro e bloqueio.
+\end{itemize}
+
+Essa organizacao evita concentrar toda a logica em um unico arquivo e facilita explicar o caminho de uma requisicao durante a apresentacao.
+
+\begin{figure}[h]
+\centering
+\fbox{
+\begin{minipage}{0.9\textwidth}
+\centering
+Navegador $\rightarrow$ rota Flask $\rightarrow$ politica de bloqueio $\rightarrow$ cliente HTTP\\
+$\rightarrow$ filtro de HTML $\rightarrow$ gravacao do log $\rightarrow$ resposta ao navegador
+\end{minipage}
+}
+\caption{Fluxo interno de uma requisicao HTTP no proxy.}
+\end{figure}
+
+\section{Decisoes de implementacao}
+
+A lista de dominios bloqueados fica em \path{settings/blocked.json}, usando a chave \texttt{bloqueados}. Antes da comparacao, o dominio e normalizado para minusculas, sem porta e sem o prefixo \texttt{www.}. Assim, \texttt{www.example.com:80} e \texttt{example.com} sao tratados como o mesmo destino para fins de bloqueio.
+
+As substituicoes ficam em \texttt{settings/words.json}. O filtro e aplicado apenas quando o cabecalho \texttt{Content-Type} indica \texttt{text/html}. Isso evita tentar alterar imagens, arquivos binarios ou respostas JSON. Os termos sao ordenados por tamanho decrescente para que frases maiores sejam avaliadas antes de palavras menores.
+
+O proxy tambem trata query strings. Por exemplo, uma chamada com parametro \texttt{curso=si2} deve repassar esse parametro para o servidor de origem.
+
+O log foi gravado em JSON Lines, no arquivo \texttt{storage/access\_log.jsonl}. Cada linha e um objeto independente, contendo data, URL, dominio, acao tomada, codigo de status e quantidade de substituicoes. Esse formato e adequado para log incremental porque nao e necessario reescrever um grande array JSON a cada acesso.
+
+\section{Trechos principais da implementacao}
+
+O controlador central valida a URL e assume HTTP quando o usuario nao informa o esquema:
+
+\begin{verbatim}
+if "://" not in target:
+    target = f"http://{target}"
+if parsed.scheme != "http":
+    raise ValueError("Este proxy aceita apenas URLs HTTP.")
+\end{verbatim}
+
+A politica de bloqueio normaliza o dominio antes da comparacao:
+
+\begin{verbatim}
+if clean.startswith("www."):
+    clean = clean[4:]
+return clean in blocked_domains
+\end{verbatim}
+
+O filtro de texto usa substituicao case-insensitive e informa quantas trocas foram feitas:
+
+\begin{verbatim}
+result, count = rule.pattern.subn(rule.replacement, result)
+total_replacements += count
+\end{verbatim}
+
+\section{Dificuldades e aprendizados}
+
+Uma dificuldade foi entender que o proxy nao deve tratar todos os conteudos como texto. Algumas respostas podem ser imagens, CSS, JavaScript, JSON ou arquivos compactados. Por isso o codigo preserva o corpo original quando a resposta nao e HTML.
+
+Outro ponto importante foi o cabecalho de codificacao. Para facilitar a reescrita de HTML, o proxy pede ao servidor de origem uma resposta sem compressao usando o cabecalho \texttt{Accept-Encoding} com valor \texttt{identity}. Isso evita aplicar expressoes regulares sobre bytes compactados.
+
+O trabalho reforcou a diferenca entre cabecalhos e corpo da resposta, a importancia do \texttt{Content-Type}, o papel do dominio na decisao de bloqueio e o cuidado necessario ao modificar uma resposta antes de devolve-la ao navegador.
+
+\section{HTTPS e limitacoes do filtro}
+
+O filtro de conteudo nao funciona em HTTPS comum porque o conteudo da pagina e protegido por TLS. Quando um navegador acessa um site HTTPS por proxy, o comportamento esperado e criar um tunel com o metodo \texttt{CONNECT}. Depois disso, o proxy apenas encaminha bytes cifrados entre cliente e servidor.
+
+Como o proxy nao possui as chaves da conexao TLS, ele nao consegue ler o HTML em texto claro e, portanto, nao consegue aplicar substituicoes. Para filtrar HTTPS seria necessario implementar uma interceptacao do tipo Man-in-the-Middle, criando uma autoridade certificadora local, instalando essa CA no navegador e gerando certificados dinamicos para os sites acessados.
+
+Essa solucao e mais complexa, tem implicacoes de seguranca e nao faz parte desta entrega. Por isso, este projeto se limita a HTTP e explica o comportamento de HTTPS no relatorio, conforme pedido no enunciado.
+
+\section{Uso no navegador}
+
+O proxy pode ser configurado no navegador como proxy HTTP usando host \texttt{127.0.0.1} e porta \texttt{5000}. Nesse modo, o navegador envia requisicoes HTTP para o servidor Flask e o proxy aplica as mesmas regras de bloqueio, repasse, filtro e log.
+
+No Windows, essa configuracao fica em \textit{Settings}, \textit{Network \& internet}, \textit{Proxy}, \textit{Manual proxy setup}. Basta ativar a opcao de servidor proxy e preencher endereco \texttt{127.0.0.1} e porta \texttt{5000}.
+
+Essa configuracao deve ser usada com sites HTTP, como \texttt{http://neverssl.com} ou \texttt{http://info.cern.ch}. Para HTTPS, o navegador tenta usar \texttt{CONNECT}; como esse metodo nao foi implementado nesta versao, o suporte a HTTPS fica fora do escopo.
+
+\section{Testes realizados}
+
+Foram criados testes unitarios com \texttt{pytest} para tres partes principais:
+
+\begin{itemize}
+  \item politica de bloqueio, incluindo dominio com porta e prefixo \texttt{www.};
+  \item filtro de texto, incluindo substituicao case-insensitive e preferencia por frases maiores;
+  \item validacao de URL, incluindo URL sem esquema, esquema invalido e query string.
+\end{itemize}
+
+Tambem foi feito teste manual com servidor HTTP local para confirmar o repasse e a substituicao de termo no HTML.
+
+\section{Uso de inteligencia artificial}
+
+Usei inteligencia artificial como apoio durante o desenvolvimento do trabalho, principalmente para organizar a arquitetura do projeto, revisar textos do README e deste relatorio, criar testes simples com \texttt{pytest} e entender como o proxy poderia funcionar quando configurado diretamente no navegador pelo proxy manual do Windows.
+
+As sugestoes geradas foram revisadas e testadas antes de entrar na versao final. Eu conferi o funcionamento das partes principais: carregamento dos arquivos \texttt{blocked.json} e \texttt{words.json}, bloqueio de dominios, filtro de palavras em HTML, gravacao do log em JSON Lines, validacao das URLs e suporte a requisicoes HTTP enviadas pelo navegador.
+
+Com esse processo, aprendi melhor a diferenca entre acessar o proxy pelo formato didatico \texttt{localhost:5000/http://site} e configurar o navegador para enviar requisicoes HTTP pelo proxy. Tambem revisei a limitacao do HTTPS e o motivo de o metodo \texttt{CONNECT} ser necessario para tunelamento TLS.
+
+\section{Conclusao}
+
+O projeto mostra, de forma pratica, que o HTTP permite que um intermediario leia e modifique respostas quando nao ha criptografia. Tambem evidencia por que o HTTPS e importante: ele impede que proxies comuns inspecionem e alterem o conteudo trafegado entre navegador e servidor.
+
+A implementacao final cumpre os requisitos obrigatorios do enunciado e usa uma organizacao modular para deixar as decisoes tecnicas mais claras.
+
+\end{document}

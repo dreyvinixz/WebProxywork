@@ -1,0 +1,9 @@
+{"timestamp":"2026-05-29T00:00:00+00:00","url":"http://example.local/demo","domain":"example.local","action":"allowed","status_code":200,"filtered_terms_count":0}
+{"timestamp": "2026-05-29T09:42:27.354980+00:00", "url": "http://instagram.com", "domain": "instagram.com", "action": "blocked", "status_code": 403, "filtered_terms_count": 0}
+{"timestamp": "2026-05-29T09:45:29.951692+00:00", "url": "http://instagram.com", "domain": "instagram.com", "action": "blocked", "status_code": 403, "filtered_terms_count": 0}
+{"timestamp": "2026-05-29T09:45:55.402090+00:00", "url": "http://neverssl.com", "domain": "neverssl.com", "action": "error", "status_code": 502, "filtered_terms_count": 0}
+{"timestamp": "2026-05-29T09:46:10.739881+00:00", "url": "http://127.0.0.1:57924/pagina", "domain": "127.0.0.1", "action": "filtered", "status_code": 200, "filtered_terms_count": 1}
+{"timestamp": "2026-05-29T09:52:48.347665+00:00", "url": "http://127.0.0.1:60409/pagina?curso=si2", "domain": "127.0.0.1", "action": "filtered", "status_code": 200, "filtered_terms_count": 1}
+{"timestamp": "2026-05-29T10:00:50.002492+00:00", "url": "http://pagina?x=1", "domain": "pagina", "action": "error", "status_code": 502, "filtered_terms_count": 0}
+{"timestamp": "2026-05-29T10:01:46.942293+00:00", "url": "http://pagina?x=1", "domain": "pagina", "action": "error", "status_code": 502, "filtered_terms_count": 0}
+{"timestamp": "2026-05-29T10:02:43.351750+00:00", "url": "http://127.0.0.1:56768/pagina?x=1", "domain": "127.0.0.1", "action": "filtered", "status_code": 200, "filtered_terms_count": 1}
