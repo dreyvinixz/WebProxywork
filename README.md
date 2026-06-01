@@ -80,13 +80,13 @@ http://localhost:5000
 URL completa:
 
 ```text
-http://localhost:5000/http://neverssl.com
+http://localhost:5000/http://example.com
 ```
 
 URL sem esquema, assumindo HTTP:
 
 ```text
-http://localhost:5000/neverssl.com
+http://localhost:5000/httpforever.com
 ```
 
 Dominio bloqueado:
@@ -124,12 +124,25 @@ Ative a opcao, coloque `127.0.0.1` em Address e `5000` em Port.
 Depois disso, acesse sites HTTP, por exemplo:
 
 ```text
-http://neverssl.com
 http://example.com
+http://httpforever.com
 http://info.cern.ch
 ```
 
-Esta configuracao atende navegacao HTTP normal. Ela nao atende HTTPS porque o navegador usa o metodo `CONNECT` para abrir tuneis TLS, e esta versao do projeto nao implementa esse metodo. A limitacao e explicada no relatorio tecnico.
+Alguns sites HTTP publicos podem ficar instaveis dependendo da rede, DNS ou rota ate a origem.
+Se um dominio der timeout, teste outro item de `settings/http_test_sites.json`, como `example.com`,
+`httpforever.com` ou `info.cern.ch`.
+
+Esta configuracao atende navegacao HTTP normal, isto e, enderecos que comecam com `http://`.
+Ela nao atende navegacao HTTPS normal porque o navegador usa o metodo `CONNECT` para abrir tuneis
+TLS, e esta versao do projeto nao implementa esse metodo. Se o navegador tentar abrir um site
+`https://` pelo proxy manual, a conexao pode falhar com erro de tunel/proxy. A limitacao e
+explicada no relatorio tecnico.
+
+Mesmo assim, quando uma URL HTTPS e digitada no formato direto do proxy local, por exemplo
+`http://localhost:5000/https://www.instagram.com`, o dominio ainda passa pela lista de bloqueio.
+Se ele estiver em `settings/blocked.json`, o proxy retorna a pagina de bloqueio antes de recusar
+a busca HTTPS.
 
 ## Configuracao
 

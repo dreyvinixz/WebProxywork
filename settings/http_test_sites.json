@@ -11,11 +11,6 @@
       "notes": "Site feito para permanecer disponivel em HTTP."
     },
     {
-      "name": "NeverSSL",
-      "url": "http://neverssl.com",
-      "notes": "Util para testar HTTP sem redirecionamento obrigatorio para HTTPS."
-    },
-    {
       "name": "HTTPBin HTML",
       "url": "http://httpbin.org/html",
       "notes": "Retorna uma pagina HTML simples."
@@ -51,44 +46,9 @@
       "notes": "Pagina simples para teste basico."
     },
     {
-      "name": "IANA",
-      "url": "http://iana.org",
-      "notes": "Dominio institucional para teste."
-    },
-    {
       "name": "GNU",
       "url": "http://www.gnu.org",
       "notes": "Site com HTML real para teste de repasse."
-    },
-    {
-      "name": "Debian",
-      "url": "http://www.debian.org",
-      "notes": "Site real para teste de repasse."
-    },
-    {
-      "name": "Apache",
-      "url": "http://www.apache.org",
-      "notes": "Site real para teste de repasse."
-    },
-    {
-      "name": "W3C",
-      "url": "http://www.w3.org",
-      "notes": "Site real relacionado a Web."
-    },
-    {
-      "name": "W3C TR",
-      "url": "http://www.w3.org/TR/",
-      "notes": "Pagina de recomendacoes tecnicas do W3C."
-    },
-    {
-      "name": "Columbia Sample HTML",
-      "url": "http://www.columbia.edu/~fdc/sample.html",
-      "notes": "Pagina HTML simples para visualizar conteudo."
-    },
-    {
-      "name": "HTTP BadSSL",
-      "url": "http://http.badssl.com",
-      "notes": "Pagina HTTP do projeto BadSSL."
     },
     {
       "name": "Firefox Captive Portal",

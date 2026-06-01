@@ -1,11 +1,12 @@
 from dataclasses import dataclass
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlunparse
 
 from flask import Blueprint, Response, request
 from requests import RequestException
 
 from src.access_audit import AccessAudit
 from src.content_policy import ContentPolicy
+from src.html_asset_rewriter import rewrite_asset_urls, rewrite_embedded_asset_urls
 from src.html_pages import blocked_page, error_page
 from src.origin_client import fetch_origin
 from src.text_rewriter import TextRewriter
@@ -21,6 +22,7 @@ audit = AccessAudit()
 class ParsedTarget:
     url: str
     domain: str
+    scheme: str
 
 
 LOCAL_HOSTS = {"127.0.0.1", "localhost", "0.0.0.0"}
@@ -39,12 +41,12 @@ def parse_target(raw_target: str, query_string: str = "") -> ParsedTarget:
         target = f"http://{target}"
 
     parsed = urlparse(target)
-    if parsed.scheme != "http":
+    if parsed.scheme not in {"http", "https"}:
         raise ValueError("Este proxy aceita apenas URLs HTTP.")
     if not parsed.netloc:
         raise ValueError("URL sem dominio de destino.")
 
-    return ParsedTarget(url=target, domain=parsed.hostname or parsed.netloc)
+    return ParsedTarget(url=target, domain=parsed.hostname or parsed.netloc, scheme=parsed.scheme)
 
 
 def build_target_from_request(route_target: str, host_header: str, server_port: str, query_string: str = "") -> str:
@@ -101,10 +103,15 @@ def index() -> Response:
         "<body style='font-family:Arial,sans-serif;margin:40px'>"
         "<h1>SI2 Content Proxy</h1>"
         "<p>Informe uma URL depois da barra.</p>"
-        "<code>http://localhost:5000/http://neverssl.com</code>"
+        "<code>http://localhost:5000/http://example.com</code>"
         "</body></html>"
     )
     return Response(body, status=200, content_type="text/html; charset=utf-8")
+
+
+@proxy_blueprint.route("/favicon.ico", methods=["GET", "HEAD"])
+def favicon() -> Response:
+    return Response(status=204)
 
 
 @proxy_blueprint.route("/<path:target>", methods=["GET", "HEAD"])
@@ -125,6 +132,13 @@ def proxy_request(target: str) -> Response:
         audit.record(parsed.url, parsed.domain, "blocked", 403, 0)
         return Response(blocked_page(parsed.domain), status=403, content_type="text/html; charset=utf-8")
 
+    if parsed.scheme != "http":
+        return Response(
+            error_page("Requisicao invalida", "Este proxy aceita apenas URLs HTTP."),
+            status=400,
+            content_type="text/html; charset=utf-8",
+        )
+
     try:
         origin = fetch_origin(parsed.url)
     except RequestException as exc:
@@ -138,10 +152,18 @@ def proxy_request(target: str) -> Response:
 
     if "text/html" in content_type.lower():
         rewritten, filtered_count = rewriter.rewrite(origin.text)
+        rewritten = rewrite_asset_urls(rewritten, parsed.url, _asset_proxy_base_url())
         if filtered_count:
             action = "filtered"
         body = rewritten.encode(origin.encoding or "utf-8", errors="replace")
         content_type = _with_charset(content_type, origin.encoding or "utf-8")
+    elif _can_contain_asset_urls(content_type):
+        rewritten = rewrite_embedded_asset_urls(
+            origin.text,
+            _embedded_asset_base_url(parsed.url, content_type),
+            _asset_proxy_base_url(),
+        )
+        body = rewritten.encode(origin.encoding or "utf-8", errors="replace")
 
     audit.record(parsed.url, parsed.domain, action, origin.status_code, filtered_count)
     return Response(body, status=origin.status_code, content_type=content_type)
@@ -151,3 +173,27 @@ def _with_charset(content_type: str, encoding: str) -> str:
     if "charset=" in content_type.lower():
         return content_type
     return f"{content_type}; charset={encoding}"
+
+
+def _can_contain_asset_urls(content_type: str) -> bool:
+    normalized = content_type.lower()
+    return (
+        "javascript" in normalized
+        or "text/css" in normalized
+        or "application/css" in normalized
+    )
+
+
+def _embedded_asset_base_url(url: str, content_type: str) -> str:
+    if "javascript" not in content_type.lower():
+        return url
+
+    parsed = urlparse(url)
+    return urlunparse((parsed.scheme, parsed.netloc, "/", "", "", ""))
+
+
+def _asset_proxy_base_url() -> str:
+    host_without_port = request.host.split(":", 1)[0].lower()
+    if host_without_port in LOCAL_HOSTS:
+        return request.host_url
+    return ""

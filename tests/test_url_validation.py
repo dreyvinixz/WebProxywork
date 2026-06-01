@@ -8,6 +8,15 @@ def test_parse_accepts_http_url():
 
     assert parsed.url == "http://example.com/page"
     assert parsed.domain == "example.com"
+    assert parsed.scheme == "http"
+
+
+def test_parse_accepts_https_url_for_policy_check():
+    parsed = parse_target("https://www.instagram.com")
+
+    assert parsed.url == "https://www.instagram.com"
+    assert parsed.domain == "www.instagram.com"
+    assert parsed.scheme == "https"
 
 
 def test_parse_adds_http_when_scheme_is_missing():

@@ -18,9 +18,11 @@ class Rule:
 class TextRewriter:
     def __init__(self, substitutions_file: Path = DEFAULT_SUBSTITUTIONS_FILE):
         self.substitutions_file = Path(substitutions_file)
+        self._last_loaded_mtime: float | None = None
         self.rules = self._load_rules()
 
     def rewrite(self, html: str) -> tuple[str, int]:
+        self._reload_if_changed()
         result = html
         total_replacements = 0
 
@@ -30,16 +32,28 @@ class TextRewriter:
 
         return result, total_replacements
 
+    def _reload_if_changed(self) -> None:
+        current_mtime = self._get_mtime()
+        if current_mtime != self._last_loaded_mtime:
+            self.rules = self._load_rules()
+
     def _load_rules(self) -> list[Rule]:
         if not self.substitutions_file.exists():
+            self._last_loaded_mtime = None
             return []
 
         data = json.loads(self.substitutions_file.read_text(encoding="utf-8"))
+        self._last_loaded_mtime = self._get_mtime()
         ordered_items = sorted(data.items(), key=lambda item: len(item[0]), reverse=True)
         return [
             Rule(original=word, replacement=replacement, pattern=_compile_pattern(word))
             for word, replacement in ordered_items
         ]
+
+    def _get_mtime(self) -> float | None:
+        if not self.substitutions_file.exists():
+            return None
+        return self.substitutions_file.stat().st_mtime
 
 
 def _compile_pattern(term: str) -> re.Pattern[str]:
