@@ -39,6 +39,16 @@ def test_policy_allows_unknown_domain(tmp_path: Path):
     assert not policy.is_blocked("open-site.test")
 
 
+def test_policy_blocks_subdomain_and_different_suffix(tmp_path: Path):
+    config = tmp_path / "blocked.json"
+    config.write_text('{"bloqueados": ["blocked.test"]}', encoding="utf-8")
+
+    policy = ContentPolicy(config)
+
+    assert policy.is_blocked("sub.blocked.test")
+    assert policy.is_blocked("blocked.test.br")
+
+
 def test_policy_accepts_legacy_blocked_domains_key(tmp_path: Path):
     config = tmp_path / "blocked.json"
     config.write_text('{"blocked_domains": ["example.com"]}', encoding="utf-8")

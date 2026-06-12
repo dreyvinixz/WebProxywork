@@ -16,7 +16,7 @@ class ContentPolicy:
     def is_blocked(self, domain: str) -> bool:
         self._reload_if_changed()
         normalized = normalize_domain(domain)
-        return normalized in self.blocked_domains
+        return any(_domain_matches_blocked_domain(normalized, blocked_domain) for blocked_domain in self.blocked_domains)
 
     def _reload_if_changed(self) -> None:
         current_mtime = self._get_mtime()
@@ -49,3 +49,13 @@ def normalize_domain(domain: str) -> str:
     if clean.startswith("www."):
         clean = clean[4:]
     return clean
+
+
+def _domain_matches_blocked_domain(domain: str, blocked_domain: str) -> bool:
+    if not domain or not blocked_domain:
+        return False
+    return (
+        domain == blocked_domain
+        or domain.endswith(f".{blocked_domain}")
+        or domain.startswith(f"{blocked_domain}.")
+    )
